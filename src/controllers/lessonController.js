@@ -111,7 +111,7 @@ const lessonService = {
     if (!course) throw { statusCode: 404, message: 'Course not found' };
     if (!user.is_super_admin && course.instructor_id !== user.id)
       throw { statusCode: 403, message: 'Not your course' };
-    if (file) data.file_url = `/uploads/${file.filename}`;
+    if (file) data.file_url = file.path; 
     return create(data);
   },
 
@@ -121,7 +121,7 @@ const lessonService = {
     const [[course]] = await _pool.query('SELECT * FROM courses WHERE id = ?', [lesson.course_id]);
     if (!user.is_super_admin && course.instructor_id !== user.id)
       throw { statusCode: 403, message: 'Not your course' };
-    if (file) data.file_url = `/uploads/${file.filename}`;
+    if (file) data.file_url = file.path; 
     return update(id, data);
   },
 

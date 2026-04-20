@@ -22,7 +22,7 @@ const getOne = async (id, user) => {
 };
 
 const create = async (data, file, user) => {
-  const thumbnail_url = file ? `/uploads/${file.filename}` : null;
+  const thumbnail_url = file ? file.path : null;
   return repo.create({ ...data, instructor_id: user.id, thumbnail_url });
 };
 
@@ -33,7 +33,7 @@ const update = async (id, data, file, user) => {
     throw { statusCode: 403, message: 'Not your course' };
 
   const fields = { ...data };
-  if (file) fields.thumbnail_url = `/uploads/${file.filename}`;
+if (file) fields.thumbnail_url = file.path;
   return repo.update(id, fields);
 };
 
