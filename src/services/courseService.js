@@ -1,36 +1,61 @@
-const router  = require('express').Router();
-const ctrl    = require('../controllers/courseController');
-const auth    = require('../middlewares/auth');
-const perm    = require('../middlewares/rbac');
-const upload  = require('../config/multer');
+// src/services/courseService.js
 
+const courseRepo = require('../repositories/courseRepository');
 
-router.get('/', ctrl.getPublished);
-router.get('/admin/all', auth, perm('courses','view'), ctrl.getAdminAll);
-router.get('/my',        auth, perm('courses','view'), ctrl.getMyCourses);
+const getPublished = async (query) => {
+  return await courseRepo.findPublished(query);
+};
 
+const getAdminAll = async (query) => {
+  return await courseRepo.findAll(query);
+};
 
-router.get('/:id', auth, ctrl.getOne); 
+const getInstructorCourses = async (userId) => {
+  return await courseRepo.findByInstructor(userId);
+};
 
+const getOne = async (id, user) => {
+  return await courseRepo.findById(id, user);
+};
 
-router.patch('/:id',
-  auth, perm('courses','edit'),
-  upload.single('thumbnail'),
-  ctrl.update
-);
+const create = async (body, file, user) => {
+  return await courseRepo.create(body, file, user);
+};
 
+const update = async (id, body, file, user) => {
+  return await courseRepo.update(id, body, file, user);
+};
 
-router.post('/',
-  auth, perm('courses','create'),
-  upload.single('thumbnail'),
-  ctrl.create
-);
+const remove = async (id, user) => {
+  return await courseRepo.remove(id, user);
+};
 
-router.delete('/:id', auth, perm('courses','delete'), ctrl.remove);
+const submitForReview = async (id, user) => {
+  return await courseRepo.updateStatus(id, 'pending', user);
+};
 
-router.patch('/:id/submit',    auth, perm('courses','edit'),   ctrl.submitForReview);
-router.patch('/:id/approve',   auth, perm('courses','edit'),   ctrl.approveCourse);
-router.patch('/:id/reject',    auth, perm('courses','edit'),   ctrl.rejectCourse);
-router.patch('/:id/unpublish', auth, perm('courses','edit'),   ctrl.unpublish);
+const approveCourse = async (id) => {
+  return await courseRepo.updateStatus(id, 'published');
+};
 
-module.exports = router;
+const rejectCourse = async (id, remark) => {
+  return await courseRepo.updateStatus(id, 'rejected', null, remark);
+};
+
+const unpublish = async (id) => {
+  return await courseRepo.updateStatus(id, 'draft');
+};
+
+module.exports = {
+  getPublished,
+  getAdminAll,
+  getInstructorCourses,
+  getOne,
+  create,
+  update,
+  remove,
+  submitForReview,
+  approveCourse,
+  rejectCourse,
+  unpublish
+};
