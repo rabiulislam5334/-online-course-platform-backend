@@ -55,4 +55,16 @@ const unpublish = async (req, res, next) => {
   } catch(e){next(e);}
 };
 
-module.exports = { getPublished, getAdminAll, getMyCourses, getOne, create, update, remove, submitForReview, approveCourse, rejectCourse, unpublish };
+module.exports = { 
+  getPublished, 
+  getAdminAll, 
+  getMyCourses, // রাউট ফাইলের ctrl.getMyCourses এর সাথে মিল থাকতে হবে
+  getOne, 
+  create, 
+  update, 
+  remove, 
+  submitForReview, 
+  approveCourse, 
+  rejectCourse, 
+  unpublish 
+};
