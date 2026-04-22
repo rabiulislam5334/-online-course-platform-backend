@@ -8,17 +8,14 @@ const getOne = async (id, user) => {
   const course = await repo.getById(id);
   if (!course) throw { statusCode: 404, message: 'Course not found' };
 
-  // ১. ইউজার অবজেক্ট চেক করা (ইউজার লগইন না থাকলে এটি গেস্ট হিসেবে কাজ করবে)
+  // Safety check for user object
   const isSuperAdmin = user && user.is_super_admin;
   const isOwner = user && course.instructor_id === user.id;
 
-  // ২. যদি কোর্স পাবলিশ না থাকে, তবে শুধুমাত্র এডমিন বা কোর্স মালিক দেখতে পারবে
-  if (course.status !== 'published') {
-    if (!isSuperAdmin && !isOwner) {
-      throw { statusCode: 403, message: 'Course not available' };
-    }
+  // non-admin, non-owner cannot see unpublished
+  if (course.status !== 'published' && !isSuperAdmin && !isOwner) {
+    throw { statusCode: 403, message: 'Course not available' };
   }
-  
   return course;
 };
 
@@ -31,20 +28,64 @@ const create = async (data, file, user) => {
 const update = async (id, data, file, user) => {
   const course = await repo.getById(id);
   if (!course) throw { statusCode: 404, message: 'Course not found' };
-  
-  // নিরাপদ চেক: user অবজেক্ট আছে কি না
+
   const isSuperAdmin = user && user.is_super_admin;
   const isOwner = user && course.instructor_id === user.id;
 
-  if (!isSuperAdmin && !isOwner)
+  if (!isSuperAdmin && !isOwner) {
     throw { statusCode: 403, message: 'Not your course' };
+  }
 
   const fields = { ...data };
   if (file) fields.thumbnail_url = file.path;
+  
   return repo.update(id, fields);
 };
 
-// ... বাকি ফাংশনগুলো আগের মতোই থাকবে, তবে প্রতিটিতে (user && user.id) এমন চেক রাখা ভালো।
+const remove = async (id, user) => {
+  const course = await repo.getById(id);
+  if (!course) throw { statusCode: 404, message: 'Course not found' };
+  
+  const isSuperAdmin = user && user.is_super_admin;
+  const isOwner = user && course.instructor_id === user.id;
+
+  if (!isSuperAdmin && !isOwner) {
+    throw { statusCode: 403, message: 'Not your course' };
+  }
+  
+  await repo.deleteCourse(id);
+};
+
+const submitForReview = async (id, user) => {
+  const course = await repo.getById(id);
+  if (!course) throw { statusCode: 404, message: 'Course not found' };
+  if (course.instructor_id !== user.id) throw { statusCode: 403, message: 'Not your course' };
+  if (course.status !== 'draft') throw { statusCode: 400, message: 'Only draft courses can be submitted' };
+  
+  return repo.updateStatus(id, 'pending_review');
+};
+
+const approveCourse = async (id) => {
+  const course = await repo.getById(id);
+  if (!course) throw { statusCode: 404, message: 'Course not found' };
+  if (course.status !== 'pending_review') throw { statusCode: 400, message: 'Course not pending review' };
+  
+  return repo.updateStatus(id, 'published');
+};
+
+const rejectCourse = async (id, remark) => {
+  const course = await repo.getById(id);
+  if (!course) throw { statusCode: 404, message: 'Course not found' };
+  
+  return repo.updateStatus(id, 'rejected', remark);
+};
+
+const unpublish = async (id) => {
+  const course = await repo.getById(id);
+  if (!course) throw { statusCode: 404, message: 'Course not found' };
+  
+  return repo.updateStatus(id, 'unpublished');
+};
 
 module.exports = { 
   getPublished, 
@@ -53,13 +94,7 @@ module.exports = {
   getOne, 
   create, 
   update, 
-  remove: async (id, user) => {
-    const course = await repo.getById(id);
-    if (!course) throw { statusCode: 404, message: 'Course not found' };
-    if (!(user && user.is_super_admin) && course.instructor_id !== user?.id)
-      throw { statusCode: 403, message: 'Not your course' };
-    await repo.deleteCourse(id);
-  }, 
+  remove, 
   submitForReview, 
   approveCourse, 
   rejectCourse, 
