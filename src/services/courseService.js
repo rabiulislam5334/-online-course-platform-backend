@@ -1,102 +1,40 @@
-const repo = require('../repositories/courseRepository');
+const router  = require('express').Router();
+const ctrl    = require('../controllers/courseController');
+const auth    = require('../middlewares/auth');
+const perm    = require('../middlewares/rbac');
+const upload  = require('../config/multer');
 
-const getPublished = async (query) => repo.getAllPublished(query);
-const getAdminAll = async (query) => repo.getAllForAdmin(query);
-const getInstructorCourses = async (instructor_id) => repo.getByInstructor(instructor_id);
+// ১. পাবলিক এবং এডমিন ভিউ
+router.get('/', ctrl.getPublished);
+// অ্যাডমিন সব কোর্স দেখবে
+router.get('/admin/all', auth, perm('courses','view'), ctrl.getAdminAll);
+// ইন্সট্রাক্টর তার নিজের কোর্স দেখবে
+router.get('/my', auth, perm('courses','view'), ctrl.getMyCourses);
 
-const getOne = async (id, user) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
+// ২. কোর্স ডিটেইলস
+router.get('/:id', auth, ctrl.getOne); 
 
-  // Safety check for user object
-  const isSuperAdmin = user && user.is_super_admin;
-  const isOwner = user && course.instructor_id === user.id;
+// ৩. কোর্স তৈরি
+router.post('/',
+  auth, perm('courses','create'),
+  upload.single('thumbnail'),
+  ctrl.create
+);
 
-  // non-admin, non-owner cannot see unpublished
-  if (course.status !== 'published' && !isSuperAdmin && !isOwner) {
-    throw { statusCode: 403, message: 'Course not available' };
-  }
-  return course;
-};
+// ৪. কোর্স আপডেট
+router.patch('/:id',
+  auth, perm('courses','edit'),
+  upload.single('thumbnail'),
+  ctrl.update
+);
 
-const create = async (data, file, user) => {
-  if (!user) throw { statusCode: 401, message: 'Unauthorized' };
-  const thumbnail_url = file ? file.path: null;
-  return repo.create({ ...data, instructor_id: user.id, thumbnail_url });
-};
+// ৫. কোর্স ডিলিট (/: id থেকে স্পেস সরানো হয়েছে)
+router.delete('/:id', auth, perm('courses', 'delete'), ctrl.remove);
 
-const update = async (id, data, file, user) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
+// ৬. ওয়ার্কফ্লো রাউটস (/: id থেকে স্পেস সরানো হয়েছে)
+router.patch('/:id/submit',    auth, perm('courses','edit'),   ctrl.submitForReview);
+router.patch('/:id/approve',   auth, perm('courses','edit'),   ctrl.approveCourse);
+router.patch('/:id/reject',    auth, perm('courses','edit'),   ctrl.rejectCourse);
+router.patch('/:id/unpublish', auth, perm('courses','edit'),   ctrl.unpublish);
 
-  const isSuperAdmin = user && user.is_super_admin;
-  const isOwner = user && course.instructor_id === user.id;
-
-  if (!isSuperAdmin && !isOwner) {
-    throw { statusCode: 403, message: 'Not your course' };
-  }
-
-  const fields = { ...data };
-  if (file) fields.thumbnail_url = file.path;
-  
-  return repo.update(id, fields);
-};
-
-const remove = async (id, user) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
-  
-  const isSuperAdmin = user && user.is_super_admin;
-  const isOwner = user && course.instructor_id === user.id;
-
-  if (!isSuperAdmin && !isOwner) {
-    throw { statusCode: 403, message: 'Not your course' };
-  }
-  
-  await repo.deleteCourse(id);
-};
-
-const submitForReview = async (id, user) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
-  if (course.instructor_id !== user.id) throw { statusCode: 403, message: 'Not your course' };
-  if (course.status !== 'draft') throw { statusCode: 400, message: 'Only draft courses can be submitted' };
-  
-  return repo.updateStatus(id, 'pending_review');
-};
-
-const approveCourse = async (id) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
-  if (course.status !== 'pending_review') throw { statusCode: 400, message: 'Course not pending review' };
-  
-  return repo.updateStatus(id, 'published');
-};
-
-const rejectCourse = async (id, remark) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
-  
-  return repo.updateStatus(id, 'rejected', remark);
-};
-
-const unpublish = async (id) => {
-  const course = await repo.getById(id);
-  if (!course) throw { statusCode: 404, message: 'Course not found' };
-  
-  return repo.updateStatus(id, 'unpublished');
-};
-
-module.exports = { 
-  getPublished, 
-  getAdminAll, 
-  getInstructorCourses, 
-  getOne, 
-  create, 
-  update, 
-  remove, 
-  submitForReview, 
-  approveCourse, 
-  rejectCourse, 
-  unpublish 
-};
+module.exports = router;
