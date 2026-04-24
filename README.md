@@ -14,8 +14,32 @@ npm install
 
 ### 2. Environment Setup
 ```bash
-cp .env.example .env
-# .env ফাইল খুলে আপনার DB credentials দিন
+.env.example 
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database
+DB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+DB_PORT=4000
+DB_USER=
+DB_PASSWORD=
+DB_NAME=test
+
+# JWT
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
+
+# Frontend URL (CORS)
+CLIENT_URL=http://localhost:3000
+
+# File Upload
+MAX_FILE_SIZE=5242880
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 ```
 
 ### 3. Database Setup
@@ -44,7 +68,7 @@ Health check: `http://localhost:5000/health`
 | Email    | admin@platform.com     |
 | Password | password               |
 
-> ⚠️ Production এ অবশ্যই password পরিবর্তন করুন
+> 
 
 ---
 
@@ -106,7 +130,7 @@ backend/
 
 ## 📡 API Endpoints
 
-### Auth — `/api/auth`
+### Auth — `/api/auth.`
 | Method | Endpoint        | Description              |
 |--------|-----------------|--------------------------|
 | POST   | /register       | New user registration    |
@@ -126,7 +150,7 @@ backend/
 | PATCH  | /:id/status       | Admin         |
 | PATCH  | /:id/role         | Admin         |
 
-### Roles — `/api/roles`
+### Roles — `/api/roles.`
 | Method | Endpoint            | Description            |
 |--------|---------------------|------------------------|
 | GET    | /                   | All roles + permissions|
@@ -135,7 +159,7 @@ backend/
 | DELETE | /:id                | Delete role            |
 | PUT    | /:id/permissions    | Update permissions     |
 
-### Courses — `/api/courses`
+### Courses — `/api/courses.`
 | Method | Endpoint          | Description              |
 |--------|-------------------|--------------------------|
 | GET    | /                 | All published courses    |
